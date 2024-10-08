@@ -1,0 +1,20 @@
+﻿load(__DIR__ + "shared.ajs");
+
+console.log("")
+console.log("")
+console.log((new Date()).toISOString());
+console.log("DeprecateElement: Cycles through deprecation states for selection elements and refreshes view.")
+
+console.log("> Toggle")
+
+toggleElementDeprecation(selection)
+
+let view;
+if (selection[0].getType() !== "archimate-diagram-model") {
+  view = selection[0].getView();
+} else {
+  view = selection[0];
+}
+
+console.log("> Refresh view")
+renderHeatmap(view, true);

@@ -1,0 +1,24 @@
+﻿load(__DIR__ + "shared.ajs");
+
+console.log("")
+console.log("")
+console.log((new Date()).toISOString());
+console.log("RenderHeatmapForSelection: Updates all selected views. Also unsets colors.")
+
+if (window.confirm("This will unset colors in the view if view.properties.Heatmap is not true, continue?")) {
+  console.log("Confirmed");
+
+  let view;
+
+  if (selection[0].getType() !== "archimate-diagram-model") {
+    view = selection[0].getView();
+  } else {
+    view = selection[0];
+  }
+
+  renderHeatmap(view);
+} else {
+  console.log("Abort");
+}
+
+

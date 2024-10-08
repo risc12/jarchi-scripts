@@ -1,0 +1,8 @@
+﻿load(__DIR__ + "shared.ajs");
+
+console.log("")
+console.log("")
+console.log((new Date()).toISOString());
+console.log("UpdateAllHeatmaps: Will update all views that are heatmaps");
+
+renderHeatmap("view", true);

@@ -1,0 +1,103 @@
+/*
+ * Constants
+ */
+const DEPRECATED = {
+  PROPERTY: "Deprecated",
+  YES: "YES",
+  NO: "NO",
+  MAYBE: "MAYBE"
+}
+
+const HEATMAP = {
+  PROPERTY: "Heatmap",
+  ENABLED: "true",
+}
+
+/*
+ * Reading and writing properties
+ */
+
+function toUpper(string) {
+  if (string && string.toUpperCase) {
+    return string.toUpperCase();
+  } else {
+    return undefined;
+  }
+}
+
+function isNotDeprecated(value) {
+  return !value || toUpper(value) === DEPRECATED.NO;
+}
+
+function isMaybeDeprecated(value) {
+  return toUpper(value) === DEPRECATED.MAYBE;
+}
+
+function isDeprecated(value) {
+  return toUpper(value) === DEPRECATED.YES;
+}
+
+function deprecate(element) {
+  return element.prop(DEPRECATED.PROPERTY, DEPRECATED.YES);
+}
+
+function maybeDeprecate(element) {
+  return element.prop(DEPRECATED.PROPERTY, DEPRECATED.MAYBE);
+}
+
+function unDeprecate(element) {
+  return element.prop(DEPRECATED.PROPERTY, DEPRECATED.NO);
+}
+
+/*
+ * Commands 
+ */
+function toggleElementDeprecation(collection) {
+  console.log("  [shared/toggleElementDeprecation] collection:", collection);
+
+  $(collection)
+    .filter("element")
+    .each(element => {
+      const value = element.prop(DEPRECATED.PROPERTY);
+      console.log("  [shared/toggleElementDeprecation]", element, "current value:", value);
+
+      if (isNotDeprecated(value)) return deprecate(element);
+      if (isDeprecated(value)) return maybeDeprecate(element);
+      if (isMaybeDeprecated(value)) return unDeprecate(element)
+    });
+}
+
+function renderHeatmap(collection, skipRestore = false) {
+  console.log("  [shared/renderHeatmap] skipRestore:", skipRestore);
+
+  const colors = {
+    "YES": "#FFB2B3",
+    "MAYBE": "#FFE3B2",
+    "NO": undefined,
+  }
+
+  const views = $(collection).filter("view");
+  console.log("  [shared/renderHeatmap] views:", views);
+
+  const enabledViews = views.filter(view => view.prop(HEATMAP.PROPERTY) === HEATMAP.ENABLED);
+  console.log("  [shared/renderHeatmap] enabledViews:", enabledViews);
+
+  enabledViews.each(view => {
+    $(view)
+      .find("element")
+      .each((element) => {
+        const value = toUpper(element.prop(DEPRECATED.PROPERTY));
+        element.fillColor = colors[value];
+      });
+  })
+
+  if (!skipRestore) {
+    const disabledViews = views.filter(view => view.prop(HEATMAP.PROPERTY) !== HEATMAP.ENABLED);
+    console.log("  [shared/renderHeatmap] disabledViews:", disabledViews);
+    disabledViews.each(view => {
+      $(view)
+        .find("element")
+        .each((element) => { element.fillColor = undefined; });
+    })
+  }
+}
