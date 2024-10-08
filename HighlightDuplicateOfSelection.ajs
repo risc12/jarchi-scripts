@@ -1,0 +1,53 @@
+﻿/*
+ * New Archi Script
+ */
+
+console.log("Highlight Duplicates of Selection");
+
+load(__DIR__ + 'helpers/logObject.ajs');
+
+function toggleDim(o, forceNormal) {
+  o.opacity = ((o.opacity === 40) || forceNormal) ? 255 : 40;
+}
+
+let view;
+
+if (selection[0].getType() !== "archimate-diagram-model") {
+  view = selection[0].getView();
+} else {
+  view = selection[0];
+}
+
+const selectedConcepts = $("concept").filter(concept => {
+  const objects = $(concept).objectRefs()
+
+  const isSelectedConcept = objects.filter(objectRef => {
+    return selection.filter(s => objectRef.id === s.id).length > 0;
+  });
+
+  return isSelectedConcept.length > 0
+});
+
+let sameConceptIds = selectedConcepts.flatMap(c => {
+  return $(c).objectRefs().map(o => o.id)
+});
+
+let sameConceptInView = $(view).children().filter(o => {
+  return sameConceptIds.includes(o.id);
+});
+
+if (sameConceptInView.length < 1) {
+  $(view).children().each(o => toggleDim(o, true));
+} else {
+  window.alert(`
+    This concept appears in this view ${sameConceptInView.length} times(s).
+    
+    ${sameConceptIds.length} time(s) in the whole model.
+  `);
+
+  $(view).children().each(o => {
+    if (!sameConceptIds.includes(o.id)) {
+      toggleDim(o);
+    }
+  });
+}

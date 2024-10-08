@@ -1,0 +1,25 @@
+﻿function main() {
+  let view;
+  // Get default ArchiMate figure width and height
+  const archiPrefs = Java.type('com.archimatetool.editor.ArchiPlugin').PREFERENCES;
+  const w = archiPrefs.getDefaultInt('defaultArchiMateFigureWidth');
+  const h = archiPrefs.getDefaultInt('defaultArchiMateFigureHeight');
+
+  if (selection[0].getType() === "archimate-diagram-model") {
+    view = selection[0];
+  } else {
+    view = selection[0].getView();
+  }
+
+  if (!view) return alert("No current view");
+
+  $(view).children().each(el => {
+    if (el.specialization && el.specialization.contains("External")) {
+      el.opacity = 150;
+      el.setLineWidth(2);
+      el.setLineColor("#000000");
+    }
+  });
+}
+
+main();

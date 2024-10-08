@@ -1,0 +1,44 @@
+﻿/*
+ * New Archi Script
+ */
+
+function main() {
+  let view;
+  // Get default ArchiMate figure width and height
+  const archiPrefs = Java.type('com.archimatetool.editor.ArchiPlugin').PREFERENCES;
+  const w = archiPrefs.getDefaultInt('defaultArchiMateFigureWidth');
+  const h = archiPrefs.getDefaultInt('defaultArchiMateFigureHeight');
+
+  if (selection[0].getType() === "archimate-diagram-model") {
+    view = selection[0];
+  } else {
+    view = selection[0].getView();
+  }
+
+  if (!view) return alert("No current view");
+
+  const type = "application-component";
+
+  let all = $(type); //.each(el => console.log(el));
+  let amtcols = Math.ceil(Math.sqrt(all.length));
+
+  let stay = all.filter(el => !el.prop("Deprecated"));
+  let maybe = all.filter(el => el.prop("Deprecated") === "maybe");
+  let go = all.filter(el => el.prop("Deprecated") === "yes");
+  let grouped = [...go, ...maybe, ...stay]
+
+  let index = 0;
+
+  for (let x = 0; x < amtcols; x++) {
+    for (let y = 0; y < amtcols; y++) {
+      index++;
+      addElement(view, grouped[index], { x: x * (w + 12), y: y * (h + 5) })
+    }
+  }
+}
+
+function addElement(view, element, location) {
+  view.add(element, location.x, location.y, -1, -1);
+}
+
+main();

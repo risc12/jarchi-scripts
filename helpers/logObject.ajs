@@ -1,0 +1,18 @@
+﻿/*
+ * New Archi Script
+ */
+
+function logObject(object) {
+  console.log(object);
+  console.log('----------------------');
+  Object.keys(object).sort().forEach(k => {
+    let alt = '';
+
+
+    if (k.startsWith('get') && k.replace('get', 'set') in object) alt = k.replace('get', 'set');
+    if (k.startsWith('set') && k.replace('set', 'get') in object) alt = k.replace('set', 'get');
+
+    console.log(k.padEnd(30, '_'), object[k], alt ? `(${alt})` : '');
+  });
+  console.log();
+}

@@ -1,0 +1,14 @@
+﻿/*
+ * New Archi Script
+ */
+
+
+load(__DIR__ + "helpers/logObject.ajs");
+
+console.log("== | Playground | ===========================================================");
+
+$("application-function").each(appf => {
+  const name = appf.getName()
+  const fixed = name.split(" ").filter(i => (i !== "Function") && (i !== "function")).join(" ");
+  appf.setName(fixed)
+});

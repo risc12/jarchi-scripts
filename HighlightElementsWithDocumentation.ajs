@@ -1,0 +1,45 @@
+﻿/*
+ * New Archi Script
+ */
+
+console.log("New Archi Script");
+
+function logObject(obj) {
+  console.log(obj);
+  Object.entries(obj).forEach(([k, v]) => {
+    console.log("  ", k, v);
+  });
+}
+
+let view;
+
+if (selection[0].getType() !== "archimate-diagram-model") {
+  view = selection[0].getView();
+} else {
+  view = selection[0];
+}
+
+function isDesaturated(element) {
+  return element.opacity === 20;
+}
+function desaturate(element) {
+  element.opacity = 20;
+}
+
+function highlight(element) {
+  const children = $(element).children();
+  if (children) {
+    children.each(child => highlight(child))
+  }
+
+  const hasDocs = element.getDocumentation && element.getDocumentation().length > 0;
+
+  if (!hasDocs && !isDesaturated(element)) {
+    desaturate(element);
+  } else {
+    element.opacity = 255;
+  }
+}
+
+// logObject(selection[0]);
+$(view).children().each(element => highlight(element));

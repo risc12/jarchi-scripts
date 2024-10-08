@@ -1,0 +1,27 @@
+﻿load(__DIR__ + "helpers/logObject.ajs");
+
+console.log("Dimension Tool");
+
+
+const allBounds = selection
+  .map(item => {
+    logObject(item);
+    if (typeof item.getBounds !== "function") return `${item.getName()} has no bounds.`;
+
+    const bounds = item.getBounds();
+
+    let name = item.getName();
+    const location = `x: ${bounds.x}, y: ${bounds.y}`;
+    const dimensions = `${bounds.width} x ${bounds.height}`
+
+    console.log(item.getLineWidth());
+    console.log(item.getLineColor());
+    console.log(bounds);
+
+
+    return [dimensions, name, location].join("\n");
+  });
+
+window.alert(allBounds.join("\n\n"))
+
+console.log($(selection).is("element"))
