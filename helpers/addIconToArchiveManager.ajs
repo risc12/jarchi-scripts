@@ -1,0 +1,51 @@
+/** @type JavaClass */ const SWT = Java.type('org.eclipse.swt.SWT');
+/** @type JavaClass */ const ImageLoader = Java.type('org.eclipse.swt.graphics.ImageLoader');
+/** @type JavaClass */ const ByteArrayOutputStream = Java.type('java.io.ByteArrayOutputStream');
+/** @type JavaClass */ const ByteArrayInputStream = Java.type('java.io.ByteArrayInputStream');
+/** @type JavaClass */ const ModelUtil = Java.type('com.archimatetool.script.dom.model.ModelUtil');
+/** @type JavaClass */ const HashMap = Java.type('java.util.HashMap');
+/** @type JavaClass */ const FileOutputStream = Java.type('java.io.FileOutputStream');
+/** @type JavaClass */ const File = Java.type('java.io.File');
+/** @type JavaClass */ const Base64 = Java.type('java.util.Base64');
+
+load(__SCRIPTS_DIR__ + 'helpers/invokePrivateMethod.ajs');
+load(__SCRIPTS_DIR__ + 'helpers/logObject.ajs');
+
+function addIconToArchiveManager(path, image) {
+  const eObj = invokePrivateMethod(model, "getEObject")();
+  const archiveManager = invokePrivateMethod(ModelUtil, "getArchiveManager", true)(eObj);
+
+  try {
+    const imageData = image.getImageData();
+    const loader = new ImageLoader();
+    loader.data = [imageData];
+    loader.compression = 0;
+
+    // Save to archive manager
+    const stream = new ByteArrayOutputStream();
+    loader.save(stream, SWT.IMAGE_PNG);
+    const imageBytes = stream.toByteArray();
+
+    archiveManager.addByteContentEntry(path, imageBytes);
+    stream.close();
+
+    // Get model file path and remove .git/temp.archimate
+    const modelPath = model.getPath();
+    const repoPath = modelPath.replace(/\/.git\/.*$/, '/');
+    const fullPath = repoPath + path;
+
+    // Convert to BASE64 and save to disk
+    const base64Bytes = Base64.getEncoder().encodeToString(imageBytes);
+    $.fs.writeFile(fullPath, base64Bytes, "BASE64");
+
+    const imgData = new HashMap();
+    imgData.put("path", path);
+    imgData.put("width", imageData.width);
+    imgData.put("height", imageData.height);
+
+    return imgData;
+  } catch (e) {
+    console.error("Error adding image to archive manager and saving to disk:");
+    console.error(e.toString());
+  }
+}

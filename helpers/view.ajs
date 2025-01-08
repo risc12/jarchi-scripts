@@ -1,0 +1,32 @@
+function getViewBounds(view) {
+  let minX;
+  let minY;
+  let maxX;
+  let maxY;
+
+  $(view).children().each(child => {
+    if (!child.getBounds) return;
+    const bounds = child.getBounds();
+    if (minX === undefined || bounds.x < minX) minX = bounds.x;
+    if (minY === undefined || bounds.y < minY) minY = bounds.y;
+    if (maxX === undefined || bounds.x + bounds.width > maxX) maxX = bounds.x + bounds.width;
+    if (maxY === undefined || bounds.y + bounds.height > maxY) maxY = bounds.y + bounds.height;
+  })
+
+  return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
+}
+
+
+function getCurrentView() {
+  let view;
+
+  if (selection[0].getType() === "archimate-diagram-model") {
+    view = selection[0];
+  } else {
+    view = selection[0].getView();
+  }
+
+  if (!view) return alert("No current view");
+
+  return view;
+}

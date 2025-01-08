@@ -4,3 +4,9 @@
 [submodule "archi-scripts"]
 	path = community/archi-scripts
 	url = git@github.com:ThomasRohde/archi-scripts.git
+[submodule "community/jarchi-community-script-pack"]
+	path = community/jarchi-community-script-pack
+	url = git@github.com:archi-contribs/jarchi-community-script-pack.git
+[submodule "community/archi-scripts"]
+	path = community/archi-scripts
+	url = git@github.com:ThomasRohde/archi-scripts.git

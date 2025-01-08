@@ -1,0 +1,59 @@
+﻿// /** @type JavaClass */ const IArchiImages = Java.type('com.archimatetool.editor.ui.IArchiImages');
+
+console.clear();
+console.log("Create Legend");
+
+load(__SCRIPTS_DIR__ + 'helpers/logObject.ajs');
+load(__SCRIPTS_DIR__ + 'helpers/view.ajs');
+load(__SCRIPTS_DIR__ + 'helpers/addIconToArchiveManager.ajs');
+load(__SCRIPTS_DIR__ + 'helpers/elementsAndRelations.ajs');
+
+function main() {
+  const view = getCurrentView();
+  $(view).children("diagram-model-group").filter(group => group.prop("IAmLegend") === "true").delete();
+  const viewBounds = getViewBounds(view);
+
+  const allToDraw = [...getAllElementTypes(), ...getAllRelationshipTypes()].filter(elementType => $(view).children(elementType.id).length > 0);
+
+  const PADDING = 20;
+  const GAP = 10;
+  const legendY = viewBounds.maxY + PADDING;
+  const legendX = viewBounds.minX;
+  const legendWidth = 200 + 2 * PADDING;
+  const legendHeight = 0;
+
+  let heightTillNow = 0;
+
+  const group = view.createObject("group", legendX, legendY, legendWidth, legendHeight);
+  group.borderType = 1;
+  group.fillColor = "#FFFFFF";
+  group.name = "";
+  group.prop("IAmLegend", "true");
+
+  allToDraw.forEach(
+    (elementType, index) => {
+      const imgData = addIconToArchiveManager(elementType.iconPath, elementType.icon);
+
+      const x = 100;
+      const y = heightTillNow;
+      const width = 200;
+      const height = imgData.height + GAP;
+
+      var entry = group.createObject("note", PADDING, PADDING + heightTillNow, width, height);
+      entry.image = imgData;
+      entry.imagePosition = 5; // Middle Right
+      entry.textPosition = 1; // Middle
+      entry.text = elementType.name;
+      entry.borderType = 2; // 2 = NONE
+
+      heightTillNow += height;
+
+    }
+  )
+
+  group.bounds = { ...group.getBounds, height: heightTillNow + 2 * PADDING }
+
+}
+
+
+main();

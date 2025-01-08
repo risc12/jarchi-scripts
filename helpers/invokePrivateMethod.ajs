@@ -1,0 +1,23 @@
+function invokePrivateMethod(obj, methodName, staticMethod = false) {
+  return function (...args) {
+    try {
+      const clazz = staticMethod ? obj.class : obj.getClass();
+
+      const methods = clazz.getDeclaredMethods();
+
+      // Get the method with the specified name and parameter types
+      const method = Array.from(methods).find(m => m.getName() === methodName);
+
+      // Make the method accessibleuuu
+      method.setAccessible(true);
+
+      // Invoke the method on the object with the provided arguments
+      return method.invoke(staticMethod ? null : obj, Java.to(args, "java.lang.Object[]"));
+    } catch (e) {
+      console.error(`Error invoking method ${methodName}:`);
+      logObject(e);
+      console.log(e.toString());
+      console.error(e);
+    }
+  }
+}
