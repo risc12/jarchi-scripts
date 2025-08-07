@@ -1,0 +1,156 @@
+﻿// Import required Java classes
+var Display = Java.type('org.eclipse.swt.widgets.Display');
+var Shell = Java.type('org.eclipse.swt.widgets.Shell');
+var Label = Java.type('org.eclipse.swt.widgets.Label');
+var SWT = Java.type('org.eclipse.swt.SWT');
+var GridLayout = Java.type('org.eclipse.swt.layout.GridLayout');
+var GridData = Java.type('org.eclipse.swt.layout.GridData');
+var PlatformUI = Java.type('org.eclipse.ui.PlatformUI');
+var Composite = Java.type('org.eclipse.swt.widgets.Composite');
+
+function createDimensionsWindow() {
+    var display = Display.getCurrent();
+    
+    // Create shell with close button in title bar and always on top
+    var shell = new Shell(display, SWT.CLOSE | SWT.TITLE | SWT.RESIZE | SWT.ON_TOP);
+    shell.setText("Element Dimensions");
+    shell.setBackground(display.getSystemColor(SWT.COLOR_WHITE));
+    
+    // Create main layout
+    var mainLayout = new GridLayout(1, false);
+    mainLayout.marginWidth = 10;
+    mainLayout.marginHeight = 10;
+    shell.setLayout(mainLayout);
+    
+    // Create scrollable composite for element dimensions
+    var scrollComposite = new Composite(shell, SWT.NONE);
+    scrollComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+    var scrollLayout = new GridLayout(1, false);
+    scrollComposite.setLayout(scrollLayout);
+    scrollComposite.setBackground(display.getSystemColor(SWT.COLOR_WHITE));
+    
+    function updateDimensions(selection) {
+        // Clear previous contents
+        var children = scrollComposite.getChildren();
+        for (var i = 0; i < children.length; i++) {
+            children[i].dispose();
+        }
+        
+        if (selection) {
+            var elements = selection.toArray();
+            for (var i = 0; i < elements.length; i++) {
+                var element = elements[i];
+                
+                // Create composite for each element
+                var elementComposite = new Composite(scrollComposite, SWT.NONE);
+                elementComposite.setBackground(display.getSystemColor(SWT.COLOR_WHITE));
+                elementComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+                var elementLayout = new GridLayout(2, false);
+                elementLayout.marginHeight = 5;
+                elementLayout.horizontalSpacing = 10;
+                elementComposite.setLayout(elementLayout);
+                
+                // Element name/type
+                var nameLabel = new Label(elementComposite, SWT.NONE);
+                nameLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false, 2, 1));
+                try {
+                    var model = element.getModel();
+                    nameLabel.setText(model.getName() || "Unnamed Element");
+                } catch (e) {
+                    nameLabel.setText("Element " + (i + 1));
+                }
+                
+                // X position
+                var xLabel = new Label(elementComposite, SWT.NONE);
+                xLabel.setText("X:");
+                var xValue = new Label(elementComposite, SWT.NONE);
+                xValue.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+                
+                // Y position
+                var yLabel = new Label(elementComposite, SWT.NONE);
+                yLabel.setText("Y:");
+                var yValue = new Label(elementComposite, SWT.NONE);
+                yValue.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+                
+                // Width
+                var widthLabel = new Label(elementComposite, SWT.NONE);
+                widthLabel.setText("Width:");
+                var widthValue = new Label(elementComposite, SWT.NONE);
+                widthValue.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+                
+                // Height
+                var heightLabel = new Label(elementComposite, SWT.NONE);
+                heightLabel.setText("Height:");
+                var heightValue = new Label(elementComposite, SWT.NONE);
+                heightValue.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+                
+                // Get and set dimensions
+                try {
+                    var figure = element.getFigure();
+                    if (figure) {
+                        var bounds = figure.getBounds();
+                        xValue.setText(bounds.x.toString());
+                        yValue.setText(bounds.y.toString());
+                        widthValue.setText(bounds.width.toString());
+                        heightValue.setText(bounds.height.toString());
+                    }
+                } catch (e) {
+                    xValue.setText("--");
+                    yValue.setText("--");
+                    widthValue.setText("--");
+                    heightValue.setText("--");
+                }
+                
+                // Add separator if not last element
+                if (i < elements.length - 1) {
+                    var separator = new Label(scrollComposite, SWT.HORIZONTAL | SWT.SEPARATOR);
+                    separator.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+                }
+            }
+        }
+        
+        // Refresh layout
+        scrollComposite.layout(true, true);
+        shell.pack();
+    }
+    
+    // Selection Listener
+    var SelectionListener = Java.type('org.eclipse.ui.ISelectionListener');
+    var listener = new SelectionListener({
+        selectionChanged: function() {
+            var selection = PlatformUI.getWorkbench()
+                .getActiveWorkbenchWindow()
+                .getSelectionService()
+                .getSelection();
+            
+            updateDimensions(selection);
+        }
+    });
+    
+    // Register selection listener
+    var window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+    var selectionService = window.getSelectionService();
+    selectionService.addSelectionListener(listener);
+    
+    // Handle shell closing - remove selection listener
+    shell.addListener(SWT.Dispose, function(event) {
+        selectionService.removeSelectionListener(listener);
+    });
+    
+    // Set minimum width
+    shell.setMinimumSize(250, 100);
+    
+    // Position the window in a reasonable place
+    var primaryShell = display.getActiveShell();
+    var bounds = primaryShell.getBounds();
+    shell.setLocation(bounds.x + 100, bounds.y + 100);
+    
+    // Initial size and show
+    shell.pack();
+    shell.open();
+    
+    return shell;
+}
+
+// Create the window
+var dimensionsWindow = createDimensionsWindow();

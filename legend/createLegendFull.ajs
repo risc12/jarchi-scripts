@@ -1,0 +1,191 @@
+/* The problem is mainly with how I handle images, which starts at line 70*/
+
+const IArchiImages = Java.type('com.archimatetool.editor.ui.IArchiImages');
+const SWT = Java.type('org.eclipse.swt.SWT');
+const ImageLoader = Java.type('org.eclipse.swt.graphics.ImageLoader');
+const ByteArrayOutputStream = Java.type('java.io.ByteArrayOutputStream');
+const ModelUtil = Java.type('com.archimatetool.script.dom.model.ModelUtil');
+const HashMap = Java.type('java.util.HashMap');
+const Base64 = Java.type('java.util.Base64');
+
+
+const RELATIONSHIPS = ["composition", "aggregation", "assignment", "realization", "serving", "access", 
+  "association", "influence", "triggering", "flow", "specialization", "junction"];
+
+const ELEMENTS = ["capability", "course-of-action", "resource", "value-stream",
+  "business-actor", "business-role", "business-collaboration", "business-interface", 
+  "business-process", "business-function", "business-interaction", "business-event", 
+  "business-service", "business-object", "contract", "product", "representation",
+  "application-component", "application-collaboration", "application-interface", 
+  "application-function", "application-interaction", "application-process", 
+  "application-event", "application-service", "data-object",
+  "node", "device", "system-software", "technology-collaboration", "technology-interface", 
+  "path", "communication-network", "technology-function", "technology-process", 
+  "technology-interaction", "technology-event", "technology-service", "artifact",
+  "equipment", "facility", "distribution-network", "material",
+  "workpackage", "deliverable", "implementation-event", "plateau", "gap",
+  "stakeholder", "driver", "assessment", "goal", "outcome", "principle", 
+  "requirement", "meaning", "value", "constraint",
+  "grouping", "location"];
+
+
+// -- Init -----------------------------------------------------------------------------------------
+function main () {
+  // Get the current view (there isn't really a better way to do this, right?)
+  let view;
+  if (selection[0].getType() === "archimate-diagram-model") {
+    view = selection[0];
+  } else {
+    view = selection[0].getView();
+  }
+  if (!view) return alert("No current view");
+
+  // Layout settings
+  const viewBounds = getViewBounds(view);
+  const padding = 20;
+  const gap = 10;
+  const legendX = viewBounds.minX;
+  const legendY = viewBounds.maxY + padding;
+  const entryWidth = 200;
+  const legendWidth = entryWidth + 2 * padding;
+
+  // -- Removing and adding elements to the view -----------------------------------------------------------------
+  // Remove existing legend
+  $(view).children("diagram-model-group").filter(group => group.prop("IAmLegend") === "true").delete();
+
+  // Filter only element/relationship types that exist in the current view
+  const entriesToAdd = [...getAllElementTypes(), ...getAllRelationshipTypes()]
+    .filter(elementType => $(view).children(elementType.id).length > 0);
+
+  // Create legend group
+  const group = view.createObject("group", legendX, legendY, legendWidth, 0);
+  group.borderType = 1;
+  group.fillColor = "#FFFFFF";
+  group.name = "";
+  group.prop("IAmLegend", "true");
+
+  // Add entries to legend
+  let heightTillNow = 0;
+  entriesToAdd.forEach(elementType => {
+    const imgData = addIconToArchiveManager(elementType.iconPath, elementType.icon);
+    //              ^^^^^^^^^^^^^^^^^^^^^^ This is where the problem is, it is defined below at line 123
+    
+    const height = imgData.height + gap;
+    
+    // Create note with icon and label
+    var entry = group.createObject("note", padding, padding + heightTillNow, entryWidth, height);
+    entry.image = imgData;
+    entry.imagePosition = 5; // Middle Right
+    entry.textPosition = 1; // Middle
+    entry.text = elementType.name;
+    entry.borderType = 2; // NONE
+    
+    heightTillNow += height;
+  });
+
+  // Resize group to fit content
+  group.bounds = { ...group.getBounds, height: heightTillNow + 2 * padding };
+}
+
+main();
+
+/* -- Helper Functions ------------------------------------------------------------------ */
+// Convert camelCase to UPPER_CASE for image constants
+function toScreamingSnakeCase(str) { return str.replaceAll("-", "_").replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase(); }
+function toTitleCase(str) { return str.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '); }
+
+function getImageForElementType(elementType) { return IArchiImages.ImageFactory.getImage(getImagePath(elementType)); }
+function getImagePath(elementType) { return IArchiImages[`ICON_${toScreamingSnakeCase(elementType)}`] || IArchiImages.ICON_CANCEL_SEARCH;
+}
+
+function getAllElementTypes() {
+  return ELEMENTS.map(id => ({
+    id,
+    name: toTitleCase(id),
+    icon: getImageForElementType(id),
+    iconId: id,
+    iconPath: getImagePath(id)
+  }));
+}
+
+function getAllRelationshipTypes() {
+  return RELATIONSHIPS.map(id => ({
+    id: `${id}-relationship`,
+    name: toTitleCase(id) + " Relationship",
+    icon: getImageForElementType(`${id}-relation`),
+    iconId: `${id}-relation`,
+    iconPath: getImagePath(`${id}-relation`),
+  }));
+}
+
+/* -- ArchiveManager  ------------------------------------------------------------------ */
+// Add icon to archive manager and save to disk
+function addIconToArchiveManager(path, image) {
+  const eObj = invokePrivateMethod(model, "getEObject")(); // Im so sorry...
+  const archiveManager = invokePrivateMethod(ModelUtil, "getArchiveManager", true)(eObj);
+
+  try {
+    // Convert image to PNG bytes
+    const imageData = image.getImageData();
+    const loader = new ImageLoader();
+    loader.data = [imageData];
+    loader.compression = 0;
+    
+    const stream = new ByteArrayOutputStream();
+    loader.save(stream, SWT.IMAGE_PNG);
+    const imageBytes = stream.toByteArray();
+
+    // Add to archive manager
+    archiveManager.addByteContentEntry(path, imageBytes);
+    stream.close();
+
+    // Save to disk for coArchi compatibility               //  <-- This doesnt actually work help at all
+    const modelPath = model.getPath();                      //
+    const repoPath = modelPath.replace(/\/.git\/.*$/, '/'); //
+    const fullPath = repoPath + path;                       //
+    
+    const base64Bytes = Base64.getEncoder().encodeToString(imageBytes);
+    $.fs.writeFile(fullPath, base64Bytes, "BASE64");
+
+    // Return image metadata
+    const imgData = new HashMap();
+    imgData.put("path", path);
+    imgData.put("width", imageData.width);
+    imgData.put("height", imageData.height);
+    return imgData;
+  } catch (e) {
+    console.error(`Error adding image to archive: ${e}`);
+  }
+}
+
+// Helper to invoke private Java methods
+// Again, I'm very sorry...
+function invokePrivateMethod(obj, methodName, staticMethod = false) {
+  return function (...args) {
+    try {
+      const clazz = staticMethod ? obj.class : obj.getClass();
+      const methods = clazz.getDeclaredMethods();
+      const method = Array.from(methods).find(m => m.getName() === methodName);
+      method.setAccessible(true);
+      return method.invoke(staticMethod ? null : obj, Java.to(args, "java.lang.Object[]"));
+    } catch (e) {
+      console.error(`Error invoking method ${methodName}: ${e}`);
+    }
+  }
+}
+
+// Calculate the bounds of all elements in the view
+function getViewBounds(view) {
+  let minX, minY, maxX, maxY;
+
+  $(view).children().each(child => {
+    if (!child.getBounds) return;
+    const bounds = child.getBounds();
+    if (minX === undefined || bounds.x < minX) minX = bounds.x;
+    if (minY === undefined || bounds.y < minY) minY = bounds.y;
+    if (maxX === undefined || bounds.x + bounds.width > maxX) maxX = bounds.x + bounds.width;
+    if (maxY === undefined || bounds.y + bounds.height > maxY) maxY = bounds.y + bounds.height;
+  });
+
+  return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
+}

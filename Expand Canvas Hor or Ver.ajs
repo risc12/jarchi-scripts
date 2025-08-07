@@ -1,0 +1,115 @@
+﻿/** @type JavaClass */ const Point = Java.type('org.eclipse.draw2d.geometry.Point');
+/** @type JavaClass */ const SWT = Java.type("org.eclipse.swt.SWT");
+const Listener = Java.type("org.eclipse.swt.widgets.Listener");
+const CommandHandler = Java.type('com.archimatetool.script.commands.CommandHandler');
+
+console.log("== Expand Canvas =======================================\n");
+
+// Reference to the main Display
+const display = this.shell.getDisplay();
+const view = (selection[0].getType() === "archimate-diagram-model") ? selection[0] : selection[0].getView();
+const MOVEMENT_THRESHOLD = 5;
+
+/**
+ * Get the current mouse position in canvas coordinates.
+ */
+function getCanvasCoordinates() {
+    const cursorLocation = shell.display.getCursorLocation();
+    const graphicalViewer = globalThis.workbenchwindow.getActivePage().getActiveEditor().getGraphicalViewer();
+    const locationInsideCanvas = graphicalViewer.getControl().getViewport().getViewLocation();
+    const controlLocation = graphicalViewer.getControl().getParent().getParent().getParent().getParent().getLocation();
+    const locationOfCanvasOnScreen = graphicalViewer.getControl().toDisplay(controlLocation);
+    const locationOfCursorOnControl = new Point(cursorLocation.x - locationOfCanvasOnScreen.x, cursorLocation.y - locationOfCanvasOnScreen.y);
+    const zoomLevel = graphicalViewer.getRootEditPart().getZoomManager().getZoom();
+
+    return new Point(locationOfCursorOnControl.x + locationInsideCanvas.x, locationOfCursorOnControl.y + locationInsideCanvas.y).scale(1 / zoomLevel);
+}
+
+/**
+ * Decide the direction of the drag based on movement deltas.
+ */
+function decideDirection(dx, dy) {
+    return (Math.abs(dx) >= Math.abs(dy)) ? (dx >= 0 ? "right" : "left") : (dy >= 0 ? "down" : "up");
+}
+
+class ExpanderTool {
+    constructor() {
+        this.shapes = $(view).children();
+        this.originalPositions = new Map();
+        this.isDragging = false;
+        this.start = { x: undefined, y: undefined };
+        this.direction = null;
+    }
+
+    onMouseDown() {
+        console.log("MOUSE DOWN");
+        this.isDragging = true;
+        this.start = getCanvasCoordinates();
+        this.originalPositions.clear();
+
+        this.shapes.each(shape => {
+            const b = shape.bounds;
+            if (b) {
+                this.originalPositions.set(shape.id, { x: b.x, y: b.y, width: b.width, height: b.height });
+            }
+        });
+
+        CommandHandler.init("jArchiScript::ExpandCanvas");
+    }
+
+    onMouseMove() {
+        if (!this.isDragging) return;
+
+        const currentPos = getCanvasCoordinates();
+        const dx = currentPos.x - this.start.x;
+        const dy = currentPos.y - this.start.y;
+
+        if(this.direction) {
+            return this.moveShapes(dx, dy);
+        }
+
+        const aboveTreshold = Math.abs(dx) > MOVEMENT_THRESHOLD || Math.abs(dy) > MOVEMENT_THRESHOLD;
+
+        if(!this.direction && aboveTreshold) {
+            this.direction = decideDirection(dx, dy);
+        }
+    }
+
+    onMouseUp() {
+        removeAllListeners();
+        CommandHandler.finalise();
+    }
+
+    moveShapes(dx, dy) {
+        this.shapes.each(shape => {
+            const orig = this.originalPositions.get(shape.id);
+            if (!orig) return;
+
+            if ((this.direction === "right" && orig.x >= this.start.x) || (this.direction === "left" && orig.x <= this.start.x)) {
+                shape.bounds = { x: orig.x + dx, y: orig.y };
+            } else if ((this.direction === "down" && orig.y >= this.start.y) || (this.direction === "up" && orig.y <= this.start.y)) {
+                shape.bounds = { x: orig.x, y: orig.y + dy };
+            }
+        });
+    }
+}
+
+const expanderTool = new ExpanderTool();
+
+const listeners = [
+    { type: SWT.MouseDown, listener: new Listener({ handleEvent: () => expanderTool.onMouseDown() }) },
+    { type: SWT.MouseUp, listener: new Listener({ handleEvent: () => expanderTool.onMouseUp() }) },
+    { type: SWT.MouseMove, listener: new Listener({ handleEvent: () => expanderTool.onMouseMove() }) },
+    { type: SWT.KeyDown, listener: new Listener({ handleEvent: (event) => { if (event.keyCode === 27) removeAllListeners(); } }) }
+];
+
+function removeAllListeners() {
+    listeners.forEach(({ type, listener }) => display.removeFilter(type, listener));
+}
+
+function attachAllListeners() {
+    listeners.forEach(({ type, listener }) => display.addFilter(type, listener));
+}
+
+attachAllListeners();
+
