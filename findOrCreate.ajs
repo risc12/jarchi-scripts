@@ -111,11 +111,12 @@ class SelectionPalette {
 
     const filterItems = () => {
       let filter = filterText.getText();
+      const [namePart, typePart] = filter.split(':');
 
       this.filteredItems = this.items
         .map(item => ({
           ...item,
-          score: fuzzyMatchScore(item.name, filter)
+          score: fuzzyMatchScore(item.name, namePart) * (typePart ? fuzzyMatchScore(item.type, typePart) : 1 ) // When using :<type> in your query, it will also filter on that
         }))
         .filter(item => item.score > 0)
         .sort((a, b) => b.score - a.score);
